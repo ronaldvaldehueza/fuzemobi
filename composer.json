@@ -3,5 +3,11 @@
         "bcosca/fatfree": "*",
         "vlucas/valitron": "^1.2",
         "dompdf/dompdf": "0.6.*"
+    },
+    "scripts": {
+        "run" : ["php -S localhost:8080 -t ."]
+    },
+    "config": {
+        "process-timeout":0
     }
 }
