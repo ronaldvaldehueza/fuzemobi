@@ -6,3 +6,4 @@ This is Fatfree Framework (f3) project template that integrated with AdminLTE te
 2. Create database (mysql) with appdb.sql files
 3. Open config/config.ini, set the appropriate configuration according to your databse
 4. Run it from your browser
+"# fuzemobi" 
