@@ -11,6 +11,10 @@ class Controller {
         $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $this->f3 = $f3;
         $this->db = $dbh;
+
+        if (!$this->f3->exists('errors')) {
+            $this->f3->set('errors', []);
+        }
     }
 
 }

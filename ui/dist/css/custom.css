@@ -1,0 +1,16 @@
+/* Color the Reports table header */
+#report_list thead th {
+  background: #7ed2ff;   /* matches AdminLTE "yellow" skin */
+  color: #022a37;
+  border-bottom: 2px solid #1386de;
+}
+
+/* Keep color when sorting adds classes */
+#report_list thead th.sorting,
+#report_list thead th.sorting_asc,
+#report_list thead th.sorting_desc,
+#report_list thead th.sorting_asc_disabled,
+#report_list thead th.sorting_desc_disabled {
+  background: #7ed2ff;
+  color: #022a37;
+}

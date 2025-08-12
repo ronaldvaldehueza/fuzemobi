@@ -4,83 +4,69 @@
  * Description:
  *      This is a js file used only for the reporting cards.
  */
+// --- add this helper at very top ---
+(function(){
+  // Expose appsbase from serverside template if present
+  var BASE = (window.APP_BASE || '');
 
-function GetCustomersList() {
-    $('#admin_customer').show()
-    getFromAPI({
-        method: 'IOT_GetCustomerList'
-    }, function (data) {
-        if (data.message != null) {
-            $('#sel_customer')
-                .find('option')
-                .remove()
-                .end()
-            $('#sel_customer')
-                .append('<option value="">Select One</option>')
-            for (i = 0; i < data.message.length; i++) {
-                var value = data.message[i]['customer']
-                var text = data.message[i]['customer']
-                if (value != null) {
-                    selected = ''
-                    $('#sel_customer')
-                        .append('<option value="' + value + '" ' + selected + '>' + text + '</option>')
-                }
-            }
-        }
-    })
+  // Shim toastr if not loaded
+  window.toastr = window.toastr || {
+    error:  m => alert(m),
+    info:   m => alert(m),
+    success:m => alert(m),
+    warning:m => alert(m)
+  };
+
+    // Simple error helper
+  window.err = function (msg) {
+     window.toastr.error(msg);
+  };
+
+  window.getFromAPI = function(params,onSuccess){
+    $.ajax({
+      url: BASE + '/api/reports.php',
+      method: 'GET',
+      data: params,
+      dataType: 'json',
+      cache: false
+    }).done(function (json) {
+      onSuccess && onSuccess(json);
+    }).fail(function (xhr) {
+        console.error('API error',xhr.status, xhr.responseText);
+        err('API error ' + xhr.status);
+    });
+  };
+})();
+
+function msgArray(data){
+  const m = data && data.message;
+  return Array.isArray(m) ? m : (m && Array.isArray(m.message) ? m.message : []);
 }
 
 function GetPeriodList() {
-    getFromAPI({
-        method: 'IOT_GetUsagePeriodList'
-    }, function (data) {
-        if (data.message != null) {
-            $('#sel_date')
-                .find('option')
-                .remove()
-                .end()
-            $('#sel_date')
-                .append('<option value="">Select One</option>')
-            for (i = 0; i < data.message.length; i++) {
-                var value = data.message[i]['period']
-                var text = data.message[i]['period']
-                if (value != null) {
-                    $('#sel_date')
-                        .append($('<option>', {
-                            value: value,
-                            text: text
-                        }))
-                }
-            }
-        }
-    })
+  getFromAPI({ method: 'IOT_GetUsagePeriodList' }, function (data) {
+    const rows = msgArray(data);
+    $('#sel_date').empty().append('<option value="">Select One</option>');
+    rows.forEach(r => { const v = r.period; if (v) $('#sel_date').append(new Option(v, v)); });
+  });
 }
 
 function GetReportsList() {
-    $('#sel_report')
-        .find('option')
-        .remove()
-        .end()
-    $('#sel_report')
-        .append('<option value="">Select One</option>')
-    getFromAPI({
-        method: 'IOT_GetReportsList',
-    }, function (data) {
-        if (data.message != null) {
-            for (i = 0; i < data.message.length; i++) {
-                var value = data.message[i]
-                var text = data.message[i]
-                if (value != null) {
-                    $('#sel_report')
-                        .append($('<option>', {
-                            value: value,
-                            text: text
-                        }))
-                }
-            }
-        }
-    })
+  $('#sel_report').empty().append('<option value="">Select One</option>');
+  getFromAPI({ method: 'IOT_GetReportsList' }, function (data) {
+    msgArray(data).forEach(v => { if (v) $('#sel_report').append(new Option(v, v)); });
+  });
 }
+
+function GetCustomersList() {
+  $('#admin_customer').show();
+  getFromAPI({ method: 'IOT_GetCustomerList' }, function (data) {
+    const rows = msgArray(data);
+    $('#sel_customer').empty().append('<option value="">Select One</option>');
+    rows.forEach(r => { const v = r.customer; if (v) $('#sel_customer').append(new Option(v, v)); });
+  });
+}
+
 
 
 function ExportReport(fileFormat) {
@@ -90,114 +76,86 @@ function ExportReport(fileFormat) {
 }
 
 function GetReport() {
+  let isError = false;
+  if (!$('#sel_report').val()) { err('Error - Please select a valid report.'); isError = true; }
+  if (!$('#sel_date').val())   { err('Error - Please select a valid reporting period.'); isError = true; }
+  if (!$('#sel_customer').val()){ err('Error - Please select a valid customer'); isError = true; }
+  if (isError) return;
 
-    isError = false
-    if ($('#sel_report').val() == '') {
-        toastr.error('Error - Please select a valid report.');
-        isError = true
-    }
-    if ($('#sel_date').val() == '') {
-        toastr.error('Error - Please select a valid reporting period.');
-        isError = true
-    }
-    if ($('#sel_customer').val() == '') {
-        toastr.error('Error - Please select a valid customer');
-        isError = true
-    }
-    if (isError) return
+  if (result_table) {
+    result_table.destroy();
+    result_table = null;
+    $('#report_list tbody, #report_list thead, #report_list tfoot').html('');
+  }
 
-    if (result_table != null) {
-        //reset table
-        result_table.destroy();
-        result_table = null;
-        $('#report_list tbody').html('');
-        $('#report_list thead').html('');
-        $('#report_list tfoot').html('');
-    }
+  $('#reports-loading').show();
+  $('#reports-body').hide();
 
-    //show loading
-    $('#reports-loading').show()
-    $('#reports-body').hide()
-    var columns = [];
-    getFromAPI({
-        method: 'IOT_GetReportColumns',
-        report: $('#sel_report').val(),
+  getFromAPI({
+    method: 'IOT_GetReportColumns',
+    report: $('#sel_report').val()
     }, function (data) {
-        result_table_columns = data.message;
-        columns = $.map(data.message, function (v, i) {
-            return {
-                'data': v, 'title': v, 'render': function (a, display, val, row, e, f) {
-                    return val[v];
-                }
+        result_table_columns = msgArray(data);
+        // Map columns using a function so that keys with spaces work
+        const columns = result_table_columns.map(label => ({
+        data: function (row) { return row[label]; },
+        title: label
+        }));
+
+        // build THEAD and TFOOT to match column count
+        $('#report_list thead').html('<tr>' + result_table_columns.map(l => `<th>${l}</th>`).join('') + '</tr>');
+        $('#report_list tfoot').html('<tr>' + result_table_columns.map(() => '<th></th>').join('') + '</tr>');
+
+        // footer
+        let foot = '<tr class="text-bold">' + columns.map(()=>'<td></td>').join('') + '</tr>';
+        $('#report_list tfoot').html(foot);
+
+        const reportName = 'Report: ' + $('#sel_report').val() +
+                        ' <br> Customer: ' + $('#sel_customer').val() +
+                        ' <br> Period: ' + $('#sel_date').val();
+
+        result_table = $('#report_list').DataTable({
+        dom: "<'row'<'col-sm-12 col-md-6'<'text-gray font-weight-bold report-caption'>><'col-sm-12 col-md-6 text-right pt-5'lfB>>" +
+            "<'row'<'col-sm-12'tr>>" +
+            "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+        processing: true,
+        serverSide: true,
+        paging: true,
+        lengthChange: false,
+        searching: false,
+        ordering: true,
+        info: true,
+        autoWidth: false,
+        responsive: true,
+        pageLength: 10,
+        buttons: [{
+            extend: 'collection',
+            text: 'Export',
+            autoClose: true,
+            buttons: [{ text: 'CSV', action: function () { ExportReport('CSV'); } }],
+            fade: true
+        }],
+        columns: columns,
+        ajax: $.fn.dataTable.pipeline({
+            url: (window.APP_BASE || '') + '/api/reports.php',
+            data: function (d) {
+            d.method   = 'IOT_GetReport';
+            d.report   = $('#sel_report').val();
+            d.customer = $('#sel_customer').val();
+            d.period   = $('#sel_date').val();
+            d.nocache  = 1;
             }
+        }),
+        initComplete: function () {
+            $('.report-caption').html(reportName);
+            $('#reports-loading').hide();
+            $('#reports-body').show();
+        },
+        language: { processing: '<div class="spinner-border" role="status"><span class="sr-only">Loading...</span></div>' }
         });
-    }, null, false);
-
-    //set the report header.
-    var reportName = 'Report: ' + $('#sel_report').val() + ' <br> Customer: ' + $('#sel_customer').val() + ' <br> Period: ' + $('#sel_date').val();
-
-    //set footer
-    var str = '<tr class="text-bold">';
-    for (var k in columns) {
-        str += '<td></td>'
-    }
-    str += '</tr>';
-    $('#report_list tfoot').html(str);
-
-    result_table = $('#report_list')
-        .DataTable({
-            "dom":
-                "<'row'<'col-sm-12 col-md-6'<'text-gray font-weight-bold report-caption'>><'col-sm-12 col-md-6 text-right pt-5'lfB>>" +
-                "<'row'<'col-sm-12'tr>>" +
-                "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",//'Bfrtip'"
-            "processing": true,
-            "serverSide": true,
-            'paging': true,
-            'lengthChange': false,
-            'searching': false,
-            'ordering': true,
-            'info': true,
-            'autoWidth': false,
-            'responsive': true,
-            'pageLength': 10,
-            buttons: [
-                {
-                    extend: 'collection',
-                    text: 'Export',
-                    autoClose: true,
-                    buttons: [
-                        {
-                            text: 'CSV', action: function (e, dt, node, config) {
-                                ExportReport('CSV')
-                            }
-                        },
-                    ],
-                    fade: true,
-                }
-            ],
-            'columns': columns,
-            'ajax': $.fn.dataTable.pipeline({
-                url: '/api/reports.php',
-                data: function (d) {
-                    d.method = 'IOT_GetReport';
-                    d.report = $('#sel_report').val();
-                    d.customer = $('#sel_customer').val();
-                    d.period = $('#sel_date').val();
-                    d.nocache = 1;
-                },
-            }),
-            'initComplete': function (settings, data) {
-                $('.report-caption').html(reportName);
-                $('#reports-loading').hide()
-                $('#reports-body').show()
-            },
-            "language":
-                {
-                    "processing": '<div class="spinner-border" role="status"> <span class="sr-only">Loading...</span> </div>' //"<i class='fa fa-refresh fa-spin'></i>",
-                }
-        });
-
+  });
 }
+
 
 function ShowOrdersReport() {
 
@@ -310,15 +268,20 @@ $.fn.dataTable.pipeline = function (opts) {
                 "dataType": "json",
                 "cache": false,
                 "success": function (json) {
+                    // console.log('IOT_GetReport payload:', json);
+                    // console.log('first row keys:',
+                    // json?.message?.result?.[0] && Object.keys(json.message.result[0])
+                    // );
+
                     if (json.message.Error != null) {
-                        toastr.error(json.message.Error);
+                        err(json.message.Error);
                         dt = {
                             "data": [],
                             "recordsTotal": 0,
                             "recordsFiltered": 0
                         }
                     } else if (json.message.toString().indexOf("FAIL") !== -1) {
-                        toastr.error(json.message);
+                        err(json.message);
                         dt = {
                             "data": [],
                             "recordsTotal": 0,
@@ -365,39 +328,6 @@ $.fn.dataTable.pipeline = function (opts) {
 };
 
 var request_method_list = "";
-var getFromAPI = function (dataparam, action, fail, is_async) {
-    var request_method = dataparam.method;
-    if (!request_method_list.includes(request_method)) {
-        request_method_list += '<h5><strong>' + request_method + ' failed to load.</strong></h5>'
-    }
-    var maxtimeout = 180000;  //maxtimeout of 180 seconds (180 * 1000ms)
-    var baseurl = "/api/reports.php";
-    if (is_async == null) is_async = true;
-    $.ajax({
-        method: 'GET',
-        type: 'JSON',
-        contentType: 'application/json; charset=utf-8',
-        url: baseurl,
-        async: is_async,
-        data: dataparam,
-        dataType: 'JSON',
-        //timeout: maxtimeout,
-        success: function (data) {
-            data = eval(data);
-            if (action) action(data)
-        },
-        error: function (m) {
-            var err = (m.responseJSON != null ? m.responseJSON : {
-                status: false,
-                message: [m.responseText]
-            });
-            if (!err.message) {
-                err = {message: [err]}
-            }
-            console.log(err);
-        }
-    })
-};
 
 if (typeof jQuery === "undefined") {
    alert("AdminLTE requires jQuery");
