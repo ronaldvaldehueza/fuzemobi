@@ -6,11 +6,11 @@ This is a project starter template built using the **Fat-Free Framework (F3)** a
 
 ## 🚀 Features
 
-* ⚡ Lightweight MVC architecture using F3
-* 🎨 AdminLTE 3 UI integrated for responsive layout
-* 🔒 Basic login page for development
-* 📦 Easy to configure via `.ini` file
-* 🛠️ Predefined database structure via `appdb.sql`
+* ⚡ Lightweight MVC architecture using F3  
+* 🎨 AdminLTE 3 UI integrated for responsive layout  
+* 🔒 Basic login page for development  
+* 📦 Easy to configure via `.ini` file  
+* 🛠️ Predefined database structure via `appdb.sql`  
 
 ---
 
@@ -56,6 +56,12 @@ This is a project starter template built using the **Fat-Free Framework (F3)** a
 
 ---
 
+## 🌐 Demo
+
+Live Demo: [https://worldcloud9.com/dev/fuzemobi](https://worldcloud9.com/dev/fuzemobi)
+
+---
+
 ## 💡 Notes
 
 * Default login is for development/demo only – update security before going to production.
@@ -66,5 +72,5 @@ This is a project starter template built using the **Fat-Free Framework (F3)** a
 
 ## 🧑‍💻 Credits
 
-* [Fat-Free Framework (F3)](https://fatfreeframework.com/)
-* [AdminLTE](https://adminlte.io/)
+* [Fat-Free Framework (F3)](https://fatfreeframework.com/)  
+* [AdminLTE](https://adminlte.io/)  
